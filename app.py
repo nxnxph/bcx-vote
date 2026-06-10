@@ -19,7 +19,8 @@ except Exception as e:
     st.stop()
 
 st.title("🚀 BCX Hackathon Public Vote")
-st.write("Please enter your **GitHub handle** OR the **secret code**.")
+# --- UPDATED INSTRUCTION TEXT ---
+st.write("Please enter your **GitHub handle** (without leading @) or your first name. Voting is only enabled if you were mentioned in your team's GitHub readme file.")
 
 @st.cache_data(ttl=10)
 def get_users_data():
@@ -168,12 +169,4 @@ if user_id:
                     third = st.selectbox("🥉 3rd Place (1 Point)", [""] + available_teams)
                     submit = st.form_submit_button("Submit Vote")
                     
-                    if submit:
-                        if len(set([first, second, third])) == 3 and "" not in [first, second, third]:
-                            votes_table.create({"ID": str(uuid.uuid4()), "Role": "Participant", "First": first, "Second": second, "Third": third})
-                            users_table.update(record_id, {"Has_Voted": True})
-                            get_users_data.clear()
-                            st.balloons()
-                            st.success("Your vote has been recorded! Thank you.")
-                        else:
-                            st.error("Please select 3 DIFFERENT teams.")
+                    if submit
