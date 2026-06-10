@@ -26,19 +26,28 @@ def get_users_data():
     return users_table.all()
 
 all_users = get_users_data()
-TEAMS = sorted(list(set([u['fields'].get('Team') for u in all_users if u['fields'].get('Team')])))
+
+# --- NEW: Build TEAMS list with Challenge in brackets ---
+team_set = set()
+for u in all_users:
+    t = u['fields'].get('Team')
+    c = u['fields'].get('Challenge')
+    if t:
+        # If they have a challenge, append it in brackets. Otherwise just use the team name.
+        display_name = f"{t} ({c})" if c else t
+        team_set.add(display_name)
+TEAMS = sorted(list(team_set))
 
 user_id = st.text_input("GitHub Handle, Coach Code, or Admin Code:").strip()
 
 if user_id:
     # -----------------------------------------
-    # SCENARIO A: LIVE RESULTS DASHBOARD (WITH REVEAL)
+    # SCENARIO A: LIVE RESULTS DASHBOARD
     # -----------------------------------------
     if user_id == RESULTS_SECRET:
         st.success("Admin Dashboard Unlocked!")
         st.header("🏆 Hackathon Results")
         
-        # Fetch all votes and calculate the 3-2-1 scores
         all_votes = votes_table.all()
         scores = {}
         total_ballots = len(all_votes)
@@ -54,28 +63,23 @@ if user_id:
             if third: scores[third] = scores.get(third, 0) + 1
             
         if scores:
-            # Show this immediately to build suspense!
             st.metric(label="Total Ballots Cast", value=total_ballots)
             st.write("The votes have been tallied. Are you ready?")
             
             sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
             
-            # --- THE BIG REVEAL BOX ---
             with st.expander("🎉 CLICK HERE TO REVEAL WINNERS! 🎉", expanded=False):
-                st.balloons() # Triggers the balloon animation!
+                st.balloons()
                 
-                # Show the top 3 Winners prominently
                 st.subheader(f"🥇 1st Place: {sorted_scores[0][0]} ({sorted_scores[0][1]} pts)")
                 if len(sorted_scores) > 1:
                     st.subheader(f"🥈 2nd Place: {sorted_scores[1][0]} ({sorted_scores[1][1]} pts)")
                 if len(sorted_scores) > 2:
                     st.subheader(f"🥉 3rd Place: {sorted_scores[2][0]} ({sorted_scores[2][1]} pts)")
                 
-                # Draw the bar chart
                 st.divider()
                 st.bar_chart(scores)
             
-            # Refresh button (just in case)
             st.write("")
             if st.button("🔄 Refresh Data"):
                 st.rerun()
@@ -113,7 +117,11 @@ if user_id:
             if user_record['fields'].get('Has_Voted', False):
                 st.warning("You have already voted! One vote per participant.")
             else:
-                user_team = user_record['fields'].get('Team')
+                # --- NEW: Format their own team with the challenge so it gets filtered out correctly ---
+                raw_team = user_record['fields'].get('Team')
+                raw_challenge = user_record['fields'].get('Challenge')
+                user_team = f"{raw_team} ({raw_challenge})" if raw_challenge else raw_team
+                
                 record_id = user_record['id']
                 st.success(f"Welcome! Recognized as a member of **{user_team}**.")
                 
