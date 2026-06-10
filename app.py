@@ -27,22 +27,49 @@ def get_users_data():
 
 all_users = get_users_data()
 
-# --- NEW: Build TEAMS list with Challenge in brackets ---
-team_set = set()
+# --- Build TEAMS list sorted by Challenge order ---
+CHALLENGE_ORDER = [
+    "Vehicle Voice Assistant",
+    "Machine Whisperer",
+    "Farm Twin",
+    "The Sentient Home"
+]
+
+team_list_raw = []
 for u in all_users:
     t = u['fields'].get('Team')
-    c = u['fields'].get('Challenge')
+    c = u['fields'].get('Challenge', '') # Defaults to empty string if missing
     if t:
-        # If they have a challenge, append it in brackets. Otherwise just use the team name.
         display_name = f"{t} ({c})" if c else t
-        team_set.add(display_name)
-TEAMS = sorted(list(team_set))
+        team_list_raw.append({"display": display_name, "challenge": c})
+
+# Remove duplicates (in case multiple users are on the same team)
+unique_teams = []
+seen = set()
+for team_dict in team_list_raw:
+    if team_dict["display"] not in seen:
+        unique_teams.append(team_dict)
+        seen.add(team_dict["display"])
+
+# Custom sorting function
+def sort_by_challenge(team_item):
+    challenge = team_item["challenge"]
+    # If the challenge is in our ordered list, use its index.
+    if challenge in CHALLENGE_ORDER:
+        return CHALLENGE_ORDER.index(challenge)
+    # If it's a challenge not in the list, put it at the end (index 99)
+    return 99
+
+# Sort the dictionaries and extract just the display names for the dropdown
+unique_teams.sort(key=sort_by_challenge)
+TEAMS = [item["display"] for item in unique_teams]
+
 
 user_id = st.text_input("GitHub Handle, Coach Code, or Admin Code:").strip()
 
 if user_id:
     # -----------------------------------------
-    # SCENARIO A: LIVE RESULTS DASHBOARD
+    # SCENARIO A: LIVE RESULTS DASHBOARD (WITH REVEAL)
     # -----------------------------------------
     if user_id == RESULTS_SECRET:
         st.success("Admin Dashboard Unlocked!")
@@ -117,7 +144,6 @@ if user_id:
             if user_record['fields'].get('Has_Voted', False):
                 st.warning("You have already voted! One vote per participant.")
             else:
-                # --- NEW: Format their own team with the challenge so it gets filtered out correctly ---
                 raw_team = user_record['fields'].get('Team')
                 raw_challenge = user_record['fields'].get('Challenge')
                 user_team = f"{raw_team} ({raw_challenge})" if raw_challenge else raw_team
