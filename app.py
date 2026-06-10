@@ -28,12 +28,16 @@ def get_users_data():
 
 all_users = get_users_data()
 
-# --- Build TEAMS list sorted by Challenge order ---
-CHALLENGE_ORDER = [
-    "Vehicle Voice Assistant",
-    "Machine Whisperer",
-    "Farm Twin",
-    "The Sentient Home"
+# --- Build TEAMS list sorted by EXACT Team order ---
+TEAM_ORDER = [
+    "Crushing Nuts",
+    "LosRudos",
+    "Canals",
+    "FixMeNow",
+    "MidnightCoder",
+    "CodingWoolfs",
+    "Magnus_Farm_Twin",
+    "theSentientHome"
 ]
 
 team_list_raw = []
@@ -42,7 +46,8 @@ for u in all_users:
     c = u['fields'].get('Challenge', '') # Defaults to empty string if missing
     if t:
         display_name = f"{t} ({c})" if c else t
-        team_list_raw.append({"display": display_name, "challenge": c})
+        # Wir speichern auch das rohe Team für die Sortierung
+        team_list_raw.append({"display": display_name, "team": t})
 
 # Remove duplicates
 unique_teams = []
@@ -52,26 +57,26 @@ for team_dict in team_list_raw:
         unique_teams.append(team_dict)
         seen.add(team_dict["display"])
 
-# Bulletproof custom sorting function
-def sort_by_challenge(team_item):
-    # Clean up the challenge name (remove spaces, make lowercase) for safe matching
-    raw_challenge = str(team_item.get("challenge", "")).strip().lower()
+# Bulletproof custom sorting function for Teams
+def sort_by_team(team_item):
+    # Clean up the team name (remove spaces, make lowercase) for safe matching
+    raw_team = str(team_item.get("team", "")).strip().lower()
     display_name = team_item.get("display", "")
     
     # Clean up our official list for matching
-    safe_order = [chal.strip().lower() for chal in CHALLENGE_ORDER]
+    safe_order = [team.strip().lower() for team in TEAM_ORDER]
     
-    # 1. Primary sort: Challenge Order
-    if raw_challenge in safe_order:
-        primary_sort = safe_order.index(raw_challenge)
+    # 1. Primary sort: Team Order
+    if raw_team in safe_order:
+        primary_sort = safe_order.index(raw_team)
     else:
-        primary_sort = 99 # Unknown challenges go to the bottom
+        primary_sort = 99 # Unknown teams go to the bottom
         
-    # 2. Secondary sort: Alphabetically by team name (so teams in the same challenge look neat)
+    # 2. Secondary sort: Alphabetically by display name (fallback)
     return (primary_sort, display_name)
 
 # Sort and extract
-unique_teams.sort(key=sort_by_challenge)
+unique_teams.sort(key=sort_by_team)
 TEAMS = [item["display"] for item in unique_teams]
 
 
