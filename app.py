@@ -6,7 +6,7 @@ import uuid
 AIRTABLE_TOKEN = st.secrets["AIRTABLE_TOKEN"]
 AIRTABLE_BASE_ID = st.secrets["AIRTABLE_BASE_ID"]
 COACH_SECRET = "bcx26coach"  
-RESULTS_SECRET = "bcx26results"  # <--- NEW: Secret password to view the live dashboard
+RESULTS_SECRET = "bcx26results"  
 
 st.set_page_config(page_title="BCX Voting", page_icon="🚀", layout="centered")
 
@@ -32,11 +32,11 @@ user_id = st.text_input("GitHub Handle, Coach Code, or Admin Code:").strip()
 
 if user_id:
     # -----------------------------------------
-    # SCENARIO A: LIVE RESULTS DASHBOARD
+    # SCENARIO A: LIVE RESULTS DASHBOARD (WITH REVEAL)
     # -----------------------------------------
     if user_id == RESULTS_SECRET:
         st.success("Admin Dashboard Unlocked!")
-        st.header("🏆 Live Leaderboard")
+        st.header("🏆 Hackathon Results")
         
         # Fetch all votes and calculate the 3-2-1 scores
         all_votes = votes_table.all()
@@ -54,24 +54,30 @@ if user_id:
             if third: scores[third] = scores.get(third, 0) + 1
             
         if scores:
-            st.write(f"Total Ballots Cast: **{total_ballots}**")
+            # Show this immediately to build suspense!
+            st.metric(label="Total Ballots Cast", value=total_ballots)
+            st.write("The votes have been tallied. Are you ready?")
             
-            # Sort the scores from highest to lowest
             sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
             
-            # Show the top 3 Winners prominently
-            st.subheader(f"🥇 1st Place: {sorted_scores[0][0]} ({sorted_scores[0][1]} pts)")
-            if len(sorted_scores) > 1:
-                st.subheader(f"🥈 2nd Place: {sorted_scores[1][0]} ({sorted_scores[1][1]} pts)")
-            if len(sorted_scores) > 2:
-                st.subheader(f"🥉 3rd Place: {sorted_scores[2][0]} ({sorted_scores[2][1]} pts)")
+            # --- THE BIG REVEAL BOX ---
+            with st.expander("🎉 CLICK HERE TO REVEAL WINNERS! 🎉", expanded=False):
+                st.balloons() # Triggers the balloon animation!
+                
+                # Show the top 3 Winners prominently
+                st.subheader(f"🥇 1st Place: {sorted_scores[0][0]} ({sorted_scores[0][1]} pts)")
+                if len(sorted_scores) > 1:
+                    st.subheader(f"🥈 2nd Place: {sorted_scores[1][0]} ({sorted_scores[1][1]} pts)")
+                if len(sorted_scores) > 2:
+                    st.subheader(f"🥉 3rd Place: {sorted_scores[2][0]} ({sorted_scores[2][1]} pts)")
+                
+                # Draw the bar chart
+                st.divider()
+                st.bar_chart(scores)
             
-            # Draw a beautiful live bar chart
-            st.divider()
-            st.bar_chart(scores)
-            
-            # Refresh button
-            if st.button("🔄 Refresh Live Data"):
+            # Refresh button (just in case)
+            st.write("")
+            if st.button("🔄 Refresh Data"):
                 st.rerun()
         else:
             st.info("No votes have been cast yet. Waiting for data...")
