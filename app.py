@@ -3,10 +3,10 @@ from pyairtable import Api
 import uuid
 
 # --- SECURE CONFIGURATION ---
-# We now pull the secrets securely from Streamlit, not the public code!
 AIRTABLE_TOKEN = st.secrets["AIRTABLE_TOKEN"]
 AIRTABLE_BASE_ID = st.secrets["AIRTABLE_BASE_ID"]
 COACH_SECRET = "bcx26coach"  
+RESULTS_SECRET = "bcx26results"  # <--- NEW: Secret password to view the live dashboard
 
 st.set_page_config(page_title="BCX Voting", page_icon="🚀", layout="centered")
 
@@ -19,7 +19,7 @@ except Exception as e:
     st.stop()
 
 st.title("🚀 BCX Hackathon Public Vote")
-st.write("Please enter your **GitHub handle** (participants) OR the **secret code** (coaches/guests).")
+st.write("Please enter your **GitHub handle** OR the **secret code**.")
 
 @st.cache_data(ttl=10)
 def get_users_data():
@@ -28,11 +28,58 @@ def get_users_data():
 all_users = get_users_data()
 TEAMS = sorted(list(set([u['fields'].get('Team') for u in all_users if u['fields'].get('Team')])))
 
-user_id = st.text_input("GitHub Handle OR Coach Code:").strip()
+user_id = st.text_input("GitHub Handle, Coach Code, or Admin Code:").strip()
 
 if user_id:
-    # --- COACH SCENARIO ---
-    if user_id == COACH_SECRET:
+    # -----------------------------------------
+    # SCENARIO A: LIVE RESULTS DASHBOARD
+    # -----------------------------------------
+    if user_id == RESULTS_SECRET:
+        st.success("Admin Dashboard Unlocked!")
+        st.header("🏆 Live Leaderboard")
+        
+        # Fetch all votes and calculate the 3-2-1 scores
+        all_votes = votes_table.all()
+        scores = {}
+        total_ballots = len(all_votes)
+        
+        for v in all_votes:
+            fields = v.get('fields', {})
+            first = fields.get('First')
+            second = fields.get('Second')
+            third = fields.get('Third')
+            
+            if first: scores[first] = scores.get(first, 0) + 3
+            if second: scores[second] = scores.get(second, 0) + 2
+            if third: scores[third] = scores.get(third, 0) + 1
+            
+        if scores:
+            st.write(f"Total Ballots Cast: **{total_ballots}**")
+            
+            # Sort the scores from highest to lowest
+            sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+            
+            # Show the top 3 Winners prominently
+            st.subheader(f"🥇 1st Place: {sorted_scores[0][0]} ({sorted_scores[0][1]} pts)")
+            if len(sorted_scores) > 1:
+                st.subheader(f"🥈 2nd Place: {sorted_scores[1][0]} ({sorted_scores[1][1]} pts)")
+            if len(sorted_scores) > 2:
+                st.subheader(f"🥉 3rd Place: {sorted_scores[2][0]} ({sorted_scores[2][1]} pts)")
+            
+            # Draw a beautiful live bar chart
+            st.divider()
+            st.bar_chart(scores)
+            
+            # Refresh button
+            if st.button("🔄 Refresh Live Data"):
+                st.rerun()
+        else:
+            st.info("No votes have been cast yet. Waiting for data...")
+
+    # -----------------------------------------
+    # SCENARIO B: COACH / GUEST
+    # -----------------------------------------
+    elif user_id == COACH_SECRET:
         st.success("Coach Access Granted! You may vote for any team.")
         with st.form("coach_vote_form"):
             first = st.selectbox("🥇 1st Place (3 Points)", [""] + TEAMS)
@@ -48,7 +95,9 @@ if user_id:
                 else:
                     st.error("Please select 3 DIFFERENT teams.")
 
-    # --- PARTICIPANT SCENARIO ---
+    # -----------------------------------------
+    # SCENARIO C: PARTICIPANT
+    # -----------------------------------------
     else:
         user_record = next((u for u in all_users if u['fields'].get('GitHub_Handle', '').lower() == user_id.lower()), None)
         
