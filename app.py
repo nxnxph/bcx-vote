@@ -43,7 +43,7 @@ for u in all_users:
         display_name = f"{t} ({c})" if c else t
         team_list_raw.append({"display": display_name, "challenge": c})
 
-# Remove duplicates (in case multiple users are on the same team)
+# Remove duplicates
 unique_teams = []
 seen = set()
 for team_dict in team_list_raw:
@@ -51,16 +51,25 @@ for team_dict in team_list_raw:
         unique_teams.append(team_dict)
         seen.add(team_dict["display"])
 
-# Custom sorting function
+# Bulletproof custom sorting function
 def sort_by_challenge(team_item):
-    challenge = team_item["challenge"]
-    # If the challenge is in our ordered list, use its index.
-    if challenge in CHALLENGE_ORDER:
-        return CHALLENGE_ORDER.index(challenge)
-    # If it's a challenge not in the list, put it at the end (index 99)
-    return 99
+    # Clean up the challenge name (remove spaces, make lowercase) for safe matching
+    raw_challenge = str(team_item.get("challenge", "")).strip().lower()
+    display_name = team_item.get("display", "")
+    
+    # Clean up our official list for matching
+    safe_order = [chal.strip().lower() for chal in CHALLENGE_ORDER]
+    
+    # 1. Primary sort: Challenge Order
+    if raw_challenge in safe_order:
+        primary_sort = safe_order.index(raw_challenge)
+    else:
+        primary_sort = 99 # Unknown challenges go to the bottom
+        
+    # 2. Secondary sort: Alphabetically by team name (so teams in the same challenge look neat)
+    return (primary_sort, display_name)
 
-# Sort the dictionaries and extract just the display names for the dropdown
+# Sort and extract
 unique_teams.sort(key=sort_by_challenge)
 TEAMS = [item["display"] for item in unique_teams]
 
